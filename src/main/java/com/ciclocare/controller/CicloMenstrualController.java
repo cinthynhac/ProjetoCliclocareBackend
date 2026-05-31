@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
@@ -243,4 +244,31 @@ public class CicloMenstrualController {
                     );
         }
     }
+
+	// ============================
+	// CALENDÁRIO
+	// ============================
+	@GetMapping("/calendario")
+	public ResponseEntity<ApiResponse> calendario(
+			@RequestParam LocalDate inicio,
+			@RequestParam LocalDate fim
+	) {
+		Authentication authentication =
+				SecurityContextHolder.getContext().getAuthentication();
+
+		String email = authentication.getName();
+
+		Usuario usuario = usuarioRepository.findByEmail(email)
+				.orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+		var ciclos = cicloService.buscarCalendario(
+				usuario.getId(),
+				inicio,
+				fim
+		);
+
+		return ResponseEntity.ok(
+				ApiResponse.sucesso("Ciclos do calendário", ciclos)
+		);
+	}
 }
