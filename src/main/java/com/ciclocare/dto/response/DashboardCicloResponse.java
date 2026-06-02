@@ -25,5 +25,4 @@ public class DashboardCicloResponse {
 	private LocalDate janelaFertilFim;
 	private Long quantidadeCiclos;
 	private boolean menosDe3Ciclos;
-	private String mensagemDetalhadaFase;
 }
