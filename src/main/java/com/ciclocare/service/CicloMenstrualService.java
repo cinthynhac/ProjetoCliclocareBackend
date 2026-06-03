@@ -3,6 +3,7 @@ package com.ciclocare.service;
 import com.ciclocare.dto.request.CicloMenstrualRequest;
 import com.ciclocare.dto.response.CicloMenstrualResponse;
 import com.ciclocare.dto.response.DashboardCicloResponse;
+import com.ciclocare.dto.response.ModoGestanteResponse;
 import com.ciclocare.dto.response.UsuarioResponse;
 import com.ciclocare.entity.CicloMenstrual;
 import com.ciclocare.entity.Usuario;
@@ -26,6 +27,7 @@ public class CicloMenstrualService {
 
     private final CicloMenstrualRepository cicloRepository;
 	private final UsuarioRepository usuarioRepository;
+
 
     @Transactional
     public CicloMenstrualResponse criar(UUID usuarioId, CicloMenstrualRequest request) {
@@ -57,27 +59,27 @@ public class CicloMenstrualService {
 		LocalDate dataFim = request.getDataFim();
 
 		if (dataFim == null) {
-			dataFim = dataInicio.plusDays(duracaoMenstruacao - 1);
+			dataFim = dataInicio.plusDays(request.getDuracaoMenstruacao() - 1);
 		}
 
 		if (ultimosCiclos.isEmpty()) {
-			mediaDuracaoCiclo = duracaoCiclo;
+			mediaDuracaoCiclo = request.getDuracaoCiclo();
 		} else {
 			mediaDuracaoCiclo = Math.round(
 					(float) ultimosCiclos.stream()
 							.mapToInt(CicloMenstrual::getDuracaoCiclo)
 							.average()
-							.orElse(duracaoCiclo));
+							.orElse(request.getDuracaoCiclo()));
 		}
 
 		if (ultimosCiclos.isEmpty()) {
-			mediaDuracaoMenstruacao = duracaoMenstruacao;
+			mediaDuracaoMenstruacao = request.getDuracaoMenstruacao();
 		} else {
 			mediaDuracaoMenstruacao = Math.round(
 					(float) ultimosCiclos.stream()
 							.mapToInt(CicloMenstrual::getDuracaoMenstruacao)
 							.average()
-							.orElse(duracaoMenstruacao)
+							.orElse(request.getDuracaoMenstruacao())
 			);
 		}
 		LocalDate proximaPrevisao = dataInicio.plusDays(mediaDuracaoCiclo);
@@ -129,56 +131,22 @@ public class CicloMenstrualService {
         return mapToResponse(ciclo);
     }
 
-	@Transactional
-	public CicloMenstrualResponse atualizar(UUID id, CicloMenstrualRequest request) {
-		CicloMenstrual ciclo = cicloRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("Ciclo menstrual não encontrado"));
+    @Transactional
+    public CicloMenstrualResponse atualizar(UUID id, CicloMenstrualRequest request) {
+        CicloMenstrual ciclo = cicloRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ciclo menstrual não encontrado"));
 
-		LocalDate dataInicio = request.getDataInicio();
+        ciclo.setDataInicio(request.getDataInicio());
+        ciclo.setDataFim(request.getDataFim());
+        ciclo.setDuracaoCiclo(request.getDuracaoCiclo());
+        ciclo.setDuracaoMenstruacao(request.getDuracaoMenstruacao());
+        ciclo.setUltimaMenstruacao(request.getUltimaMenstruacao());
+        ciclo.setProximaPrevisao(request.getUltimaMenstruacao().plusDays(request.getDuracaoCiclo()));
+        ciclo.setIntensidadeFluxo(request.getIntensidadeFluxo());
 
-		if (dataInicio == null) {
-			dataInicio = request.getUltimaMenstruacao();
-		}
-
-		if (dataInicio == null) {
-			throw new RuntimeException("Data de início ou última menstruação é obrigatória");
-		}
-
-		int duracaoCiclo = request.getDuracaoCiclo() != null
-				? request.getDuracaoCiclo()
-				: ciclo.getDuracaoCiclo();
-
-		int duracaoMenstruacao = request.getDuracaoMenstruacao() != null
-				? request.getDuracaoMenstruacao()
-				: ciclo.getDuracaoMenstruacao();
-
-		LocalDate dataFim = request.getDataFim();
-
-		if (dataFim == null) {
-			dataFim = dataInicio.plusDays(duracaoMenstruacao - 1);
-		}
-
-		LocalDate proximaPrevisao = dataInicio.plusDays(duracaoCiclo);
-		LocalDate previsaoOvulacao = proximaPrevisao.minusDays(14);
-		LocalDate janelaFertilInicio = previsaoOvulacao.minusDays(5);
-		LocalDate janelaFertilFim = previsaoOvulacao.plusDays(1);
-
-		ciclo.setDataInicio(dataInicio);
-		ciclo.setDataFim(dataFim);
-		ciclo.setUltimaMenstruacao(dataInicio);
-		ciclo.setDuracaoCiclo(duracaoCiclo);
-		ciclo.setDuracaoMenstruacao(duracaoMenstruacao);
-		ciclo.setProximaPrevisao(proximaPrevisao);
-		ciclo.setPrevisaoOvulacao(previsaoOvulacao);
-		ciclo.setJanelaFertilInicio(janelaFertilInicio);
-		ciclo.setJanelaFertilFim(janelaFertilFim);
-		if (request.getIntensidadeFluxo() != null) {
-			ciclo.setIntensidadeFluxo(request.getIntensidadeFluxo());
-		}
-
-		CicloMenstrual cicloAtualizado = cicloRepository.save(ciclo);
-		return mapToResponse(cicloAtualizado);
-	}
+        CicloMenstrual cicloAtualizado = cicloRepository.save(ciclo);
+        return mapToResponse(cicloAtualizado);
+    }
 
     @Transactional
     public void deletar(UUID id) {
@@ -198,9 +166,6 @@ public class CicloMenstrualService {
                 .ultimaMenstruacao(ciclo.getUltimaMenstruacao())
                 .proximaPrevisao(ciclo.getProximaPrevisao())
                 .intensidadeFluxo(ciclo.getIntensidadeFluxo())
-				.previsaoOvulacao(ciclo.getPrevisaoOvulacao())
-				.janelaFertilInicio(ciclo.getJanelaFertilInicio())
-				.janelaFertilFim(ciclo.getJanelaFertilFim())
                 .criadoEm(ciclo.getCriadoEm())
                 .build();
     }
@@ -218,6 +183,9 @@ public class CicloMenstrualService {
 		Usuario usuaria = usuarioRepository.findById(idUsuaria)
 				.orElseThrow(() ->
 						new ResourceNotFoundException("Usuária não encontrada."));
+
+		Long quantidadeCiclos = cicloRepository.countByUsuario(usuaria);
+		boolean menosDe3Ciclos = quantidadeCiclos < 3;
 
 		List<CicloMenstrual> ultimosCiclos =
 				cicloRepository.findTop3ByUsuarioOrderByDataInicioDesc(usuaria);
@@ -271,7 +239,8 @@ public class CicloMenstrualService {
 				.previsaoOvulacao(previsaoOvulacao)
 				.janelaFertilInicio(janelaFertilInicio)
 				.janelaFertilFim(janelaFertilFim)
-				.mensagemDetalhadaFase(gerarMensagemDetalhada(faseCiclo, diaCiclo))
+				.quantidadeCiclos(quantidadeCiclos)
+				.menosDe3Ciclos(menosDe3Ciclos)
 				.build();
 	}
 
@@ -305,6 +274,67 @@ public class CicloMenstrualService {
 		return (int) (dias % duracaoCiclo) + 1;
 	}
 
+	public ModoGestanteResponse exibirModoGestante(UUID idUsuaria) {
+		// buscando a usuária e o último ciclo para ter como base
+		Usuario usuaria = usuarioRepository.findById(idUsuaria)
+				.orElseThrow(() ->
+						new ResourceNotFoundException("Usuária não encontrada"));
+
+		List<CicloMenstrual> ultimosCiclos =
+				cicloRepository.findTop3ByUsuarioOrderByDataInicioDesc(usuaria);
+
+		if (ultimosCiclos.isEmpty()) {
+			throw new ResourceNotFoundException("Nenhum ciclo encontrado.");
+		}
+
+		CicloMenstrual cicloAtual = ultimosCiclos.get(0);
+
+		// cálculos abaixo
+		LocalDate ultimaMenstruacao = cicloAtual.getDataInicio();
+		LocalDate hoje = LocalDate.now();
+
+		long diasGravidez = ChronoUnit.DAYS.between(ultimaMenstruacao, hoje);
+
+		int semanasCompletas = (int) diasGravidez / 7;
+		int meses = semanasCompletas / 4;
+		int semanasMes = semanasCompletas % 4;
+		int diasSemana = (int) diasGravidez % 7;
+
+		int semanaAtual = semanasCompletas + 1;
+
+		int diasGravidezTotal = 280;
+		int diasRestantes = Math.max(0, diasGravidezTotal - (int) diasGravidez);
+
+		int semanasRestantes = diasRestantes / 7;
+		int diasRestantesSemana = diasRestantes % 7;
+
+		LocalDate previsaoParto = ultimaMenstruacao.plusDays(280);
+
+		String textoMeses = meses == 1
+				? "1 mês"
+				: meses + " meses";
+
+		String textoSemanas = semanasMes == 1
+				? "1 semana"
+				: semanasMes + " semanas";
+		String mensagemSecundaria = textoMeses + " e " + textoSemanas;
+
+		return ModoGestanteResponse.builder()
+				.semanaAtual(semanaAtual)
+				.semanasCompletas(semanasCompletas)
+				.diasSemana(diasSemana)
+				.diasGravidez((int) diasGravidez)
+				.diasRestantes(diasRestantes)
+				.previsaoParto(previsaoParto)
+				.mensagemPrincipal("Você está na " + semanaAtual + "ª semana de gestação")
+				.meses(meses)
+				.semanasMes(semanasMes)
+				.semanasRestantes(semanasRestantes)
+				.diasRestantesSemana(diasRestantesSemana)
+				.mensagemSecundaria(mensagemSecundaria)
+				.build();
+	}
+
 	public String gerarMensagemDetalhada(FaseCiclo faseCiclo, Integer diaCiclo) {
 		return switch (faseCiclo) {
 			case MENSTRUAL -> switch (diaCiclo) {
@@ -333,4 +363,18 @@ public class CicloMenstrualService {
 	}
 
 
+
+	public List<CicloMenstrualResponse> buscarCalendario(
+			UUID usuarioId,
+			LocalDate inicio,
+			LocalDate fim
+	) {
+		Usuario usuario = usuarioRepository.findById(usuarioId)
+				.orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+
+		return cicloRepository.buscarCiclosNoPeriodo(usuario, inicio, fim)
+				.stream()
+				.map(this::mapToResponse)
+				.collect(Collectors.toList());
+	}
 }

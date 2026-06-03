@@ -4,6 +4,7 @@ import com.ciclocare.dto.request.RegisterRequest;
 import com.ciclocare.dto.request.UpdateProfileRequest;
 import com.ciclocare.dto.response.ApiResponse;
 import com.ciclocare.dto.response.DashboardCicloResponse;
+import com.ciclocare.dto.response.ModoGestanteResponse;
 import com.ciclocare.entity.Usuario;
 import com.ciclocare.service.CicloMenstrualService;
 import com.ciclocare.service.UsuarioService;
@@ -102,5 +103,10 @@ public class UsuarioController {
 	public DashboardCicloResponse exibirDashboard(
 			@PathVariable UUID id
 	) { return cicloMenstrualService.exibirDashboard(id); }
+
+	@GetMapping("/{id}/modo-gestante")
+	public ModoGestanteResponse exibirModoGestante(@PathVariable UUID id) {
+		return cicloMenstrualService.exibirModoGestante(id);
+	}
 
 }
